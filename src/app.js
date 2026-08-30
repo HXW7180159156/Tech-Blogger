@@ -111,12 +111,42 @@ const importers = {
   html: importHtml,
 };
 
+const modelPresets = {
+  mock: {
+    label: "离线演示模式",
+    endpoint: "",
+    model: "local-rule-demo",
+    responseFormat: "mock",
+  },
+  ollama: {
+    label: "Ollama 本地模型",
+    endpoint: "http://localhost:11434/api/chat",
+    model: "llama3.1",
+    responseFormat: "ollama",
+  },
+  lmstudio: {
+    label: "LM Studio 本地模型",
+    endpoint: "http://localhost:1234/v1/chat/completions",
+    model: "local-model",
+    responseFormat: "openai",
+  },
+  "openai-compatible": {
+    label: "OpenAI 兼容接口",
+    endpoint: "https://api.openai.com/v1/chat/completions",
+    model: "gpt-4o-mini",
+    responseFormat: "openai",
+  },
+};
+
+const modelStorageKey = "tech-blogger-model-config";
+
 const state = {
   template: "wechat",
   inputFormat: "markdown",
   article: null,
   importError: "",
   pendingImportError: "",
+  modelConfig: loadModelConfig(),
 };
 
 const elements = {
@@ -140,7 +170,36 @@ const elements = {
   rewritePlatform: document.querySelector("#rewrite-platform"),
   copyExport: document.querySelector("#copy-export"),
   templateTabs: document.querySelectorAll("[data-template]"),
+  modelProvider: document.querySelector("#model-provider"),
+  modelEndpoint: document.querySelector("#model-endpoint"),
+  modelName: document.querySelector("#model-name"),
+  modelApiKey: document.querySelector("#model-api-key"),
+  saveModel: document.querySelector("#save-model"),
+  testModel: document.querySelector("#test-model"),
+  modelStatus: document.querySelector("#model-status"),
 };
+
+function loadModelConfig() {
+  const fallback = { provider: "mock", ...modelPresets.mock, apiKey: "" };
+  try {
+    const rawConfig = window.localStorage.getItem(modelStorageKey);
+    if (!rawConfig) return fallback;
+
+    const config = JSON.parse(rawConfig);
+    const provider = modelPresets[config.provider] ? config.provider : "mock";
+    const preset = modelPresets[provider];
+    return {
+      provider,
+      ...preset,
+      endpoint: config.endpoint ?? preset.endpoint,
+      model: config.model ?? preset.model,
+      apiKey: config.apiKey || "",
+    };
+  } catch (error) {
+    console.warn("无法读取模型配置，已回退到离线演示模式。", error);
+    return fallback;
+  }
+}
 
 function escapeHtml(value) {
   return String(value)
@@ -557,6 +616,200 @@ function buildPlatformRewrite() {
   ].join("\n");
 }
 
+function getModelFormConfig() {
+  const provider = elements.modelProvider.value;
+  const preset = modelPresets[provider] || modelPresets.mock;
+  return {
+    provider,
+    ...preset,
+    endpoint: elements.modelEndpoint.value.trim(),
+    model: elements.modelName.value.trim() || preset.model,
+    apiKey: elements.modelApiKey.value.trim(),
+  };
+}
+
+function renderModelConfig() {
+  elements.modelProvider.value = state.modelConfig.provider;
+  elements.modelEndpoint.value = state.modelConfig.endpoint;
+  elements.modelName.value = state.modelConfig.model;
+  elements.modelApiKey.value = state.modelConfig.apiKey;
+  updateModelStatus(`当前使用：${modelPresets[state.modelConfig.provider].label}。`, "success");
+}
+
+function updateModelPreset(provider) {
+  const preset = modelPresets[provider] || modelPresets.mock;
+  elements.modelEndpoint.value = preset.endpoint;
+  elements.modelName.value = preset.model;
+  elements.modelApiKey.value = "";
+  updateModelStatus(`${preset.label} 已载入默认配置，保存后生效。`);
+}
+
+function updateModelStatus(message, type = "") {
+  elements.modelStatus.className = `model-status ${type}`.trim();
+  elements.modelStatus.textContent = message;
+}
+
+function saveModelConfig() {
+  state.modelConfig = getModelFormConfig();
+  window.localStorage.setItem(
+    modelStorageKey,
+    JSON.stringify({
+      provider: state.modelConfig.provider,
+      endpoint: state.modelConfig.endpoint,
+      model: state.modelConfig.model,
+      apiKey: state.modelConfig.apiKey,
+    }),
+  );
+  updateModelStatus(`${modelPresets[state.modelConfig.provider].label} 配置已保存。`, "success");
+}
+
+function getArticlePromptContext(article) {
+  return [
+    `标题：${article.title}`,
+    `摘要：${article.summary}`,
+    `平台：${platformCopy[state.template].label}`,
+    `正文 Markdown：`,
+    articleToMarkdown(article).slice(0, 6000),
+  ].join("\n");
+}
+
+function buildPrompt(action, article) {
+  const context = getArticlePromptContext(article);
+  const instructions = {
+    summarize: "请用中文生成一段 120 字以内的技术博客摘要，突出读者收益和核心实践。",
+    titles: "请生成 5 个中文技术博客标题建议。每行一个标题，不要编号，不要解释。",
+    rewrite: `请面向${platformCopy[state.template].label}生成平台化改写建议，包含开场钩子、内容结构、表达风格和行动引导。`,
+    ping: "请只回复“连接成功”。",
+  };
+  return `${instructions[action]}\n\n${context}`;
+}
+
+async function callModel(prompt) {
+  const config = state.modelConfig;
+  if (config.responseFormat === "mock") return "";
+  if (!config.endpoint) throw new Error("请先填写模型接口地址。");
+
+  if (config.responseFormat === "ollama") {
+    return callOllama(prompt, config);
+  }
+
+  return callOpenAICompatible(prompt, config);
+}
+
+async function callOllama(prompt, config) {
+  const response = await fetch(config.endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: config.model,
+      stream: false,
+      messages: [
+        { role: "system", content: "你是技术博客写作助手，输出简洁、可直接使用的中文内容。" },
+        { role: "user", content: prompt },
+      ],
+    }),
+  });
+
+  if (!response.ok) throw new Error(`Ollama 请求失败：${response.status} ${response.statusText}`);
+  const data = await response.json();
+  return data.message?.content?.trim() || data.response?.trim() || "";
+}
+
+async function callOpenAICompatible(prompt, config) {
+  const headers = { "Content-Type": "application/json" };
+  if (config.apiKey) headers.Authorization = `Bearer ${config.apiKey}`;
+
+  const response = await fetch(config.endpoint, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      model: config.model,
+      messages: [
+        { role: "system", content: "你是技术博客写作助手，输出简洁、可直接使用的中文内容。" },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) throw new Error(`模型请求失败：${response.status} ${response.statusText}`);
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content?.trim() || "";
+}
+
+function setAiButtonsDisabled(disabled) {
+  [elements.summarize, elements.optimizeTitle, elements.rewritePlatform, elements.testModel].forEach((button) => {
+    button.disabled = disabled;
+  });
+}
+
+function ensureArticleForAi() {
+  const article = state.article || parseArticle();
+  if (!article.blocks.length) throw new Error("请先导入或粘贴一篇 Markdown、Word 或 HTML 技术文章。");
+  return article;
+}
+
+async function runAiAction(action) {
+  setAiButtonsDisabled(true);
+  try {
+    const article = ensureArticleForAi();
+    if (state.modelConfig.responseFormat === "mock") {
+      if (action === "summarize") elements.summary.textContent = summarizeArticle();
+      if (action === "titles") {
+        elements.suggestions.innerHTML = buildTitleSuggestions()
+          .map((title) => `<button class="chip" type="button">${escapeHtml(title)}</button>`)
+          .join("");
+        bindSuggestionClicks();
+      }
+      if (action === "rewrite") elements.rewrite.textContent = buildPlatformRewrite();
+      updateModelStatus("离线演示模式已生成规则化辅助结果。", "success");
+      return;
+    }
+
+    updateModelStatus(`${modelPresets[state.modelConfig.provider].label} 正在生成...`);
+    const result = await callModel(buildPrompt(action, article));
+    if (!result) throw new Error("模型返回为空，请检查模型名称或服务日志。");
+
+    if (action === "summarize") elements.summary.textContent = result;
+    if (action === "titles") {
+      const titles = result
+        .split("\n")
+        .map((line) => line.replace(/^\s*[-*\d.、]+\s*/, "").trim())
+        .filter(Boolean)
+        .slice(0, 6);
+      elements.suggestions.innerHTML = titles.map((title) => `<button class="chip" type="button">${escapeHtml(title)}</button>`).join("");
+      bindSuggestionClicks();
+    }
+    if (action === "rewrite") elements.rewrite.textContent = result;
+    updateModelStatus(`${modelPresets[state.modelConfig.provider].label} 已返回结果。`, "success");
+  } catch (error) {
+    updateModelStatus(error.message, "error");
+  } finally {
+    setAiButtonsDisabled(false);
+  }
+}
+
+async function testModelConnection() {
+  saveModelConfig();
+  if (state.modelConfig.responseFormat === "mock") {
+    updateModelStatus("离线演示模式无需连接外部模型。", "success");
+    return;
+  }
+
+  setAiButtonsDisabled(true);
+  updateModelStatus(`${modelPresets[state.modelConfig.provider].label} 正在测试连接...`);
+  try {
+    const article = state.article || parseArticle();
+    const result = await callModel(buildPrompt("ping", article));
+    if (!result) throw new Error("模型返回为空，请检查模型名称或服务日志。");
+    updateModelStatus(`连接成功：${result.slice(0, 80)}`, "success");
+  } catch (error) {
+    updateModelStatus(error.message, "error");
+  } finally {
+    setAiButtonsDisabled(false);
+  }
+}
+
 function renderAssists() {
   elements.summary.textContent = summarizeArticle();
   elements.suggestions.innerHTML = buildTitleSuggestions()
@@ -741,18 +994,12 @@ elements.title.addEventListener("input", () => {
   updateAll();
   renderAssists();
 });
-elements.summarize.addEventListener("click", () => {
-  elements.summary.textContent = summarizeArticle();
-});
-elements.optimizeTitle.addEventListener("click", () => {
-  elements.suggestions.innerHTML = buildTitleSuggestions()
-    .map((title) => `<button class="chip" type="button">${escapeHtml(title)}</button>`)
-    .join("");
-  bindSuggestionClicks();
-});
-elements.rewritePlatform.addEventListener("click", () => {
-  elements.rewrite.textContent = buildPlatformRewrite();
-});
+elements.modelProvider.addEventListener("change", () => updateModelPreset(elements.modelProvider.value));
+elements.saveModel.addEventListener("click", saveModelConfig);
+elements.testModel.addEventListener("click", testModelConnection);
+elements.summarize.addEventListener("click", () => runAiAction("summarize"));
+elements.optimizeTitle.addEventListener("click", () => runAiAction("titles"));
+elements.rewritePlatform.addEventListener("click", () => runAiAction("rewrite"));
 elements.templateTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     state.template = tab.dataset.template;
@@ -766,4 +1013,5 @@ elements.copyExport.addEventListener("click", async () => {
   elements.copyStatus.textContent = `${platformCopy[state.template].label}稿件已复制。`;
 });
 
+renderModelConfig();
 loadSample();

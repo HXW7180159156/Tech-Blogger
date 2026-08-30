@@ -53,6 +53,41 @@
         <p id="import-status" class="import-status" role="status"></p>
         <div id="article-meta" class="article-meta" aria-label="统一文章模型元数据"></div>
 
+        <section class="model-panel" aria-labelledby="model-heading">
+          <div>
+            <p class="step">模型接入</p>
+            <h3 id="model-heading">AI 模型配置</h3>
+          </div>
+          <div class="model-grid">
+            <div>
+              <label for="model-provider">模型服务</label>
+              <select id="model-provider">
+                <option value="mock">离线演示模式</option>
+                <option value="ollama">Ollama 本地模型</option>
+                <option value="lmstudio">LM Studio 本地模型</option>
+                <option value="openai-compatible">OpenAI 兼容接口</option>
+              </select>
+            </div>
+            <div>
+              <label for="model-endpoint">接口地址</label>
+              <input id="model-endpoint" type="url" placeholder="http://localhost:11434/api/chat" />
+            </div>
+            <div>
+              <label for="model-name">模型名称</label>
+              <input id="model-name" type="text" placeholder="llama3.1" />
+            </div>
+            <div>
+              <label for="model-api-key">API Key（可选）</label>
+              <input id="model-api-key" type="password" autocomplete="off" placeholder="本地模型通常留空" />
+            </div>
+          </div>
+          <div class="model-actions">
+            <button id="save-model" type="button">保存配置</button>
+            <button id="test-model" class="secondary" type="button">测试连接</button>
+          </div>
+          <p id="model-status" class="model-status" role="status"></p>
+        </section>
+
         <div class="actions" aria-label="AI 辅助动作">
           <button id="summarize" type="button">生成摘要</button>
           <button id="optimize-title" type="button">优化标题</button>

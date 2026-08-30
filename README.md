@@ -1,6 +1,6 @@
 # Tech Blogger MVP Demo
 
-一个可本地运行的技术博客写作 APP 最小演示闭环：导入 Markdown、Word/富文本粘贴或 HTML 技术文章，转换为统一文章模型，编辑内容，执行离线模拟的 AI 辅助动作，并导出微信公众号、小红书、抖音三类平台稿件。
+一个可本地运行的技术博客写作 APP 最小演示闭环：导入 Markdown、Word/富文本粘贴或 HTML 技术文章，转换为统一文章模型，编辑内容，接入离线演示或真实大模型执行 AI 辅助动作，并导出微信公众号、小红书、抖音三类平台稿件。
 
 ## 运行步骤
 
@@ -21,15 +21,41 @@
    - 或通过格式下拉框选择 Markdown / Word / HTML 后粘贴内容。
    - 可导入 `.md`、`.markdown`、`.html`、`.htm`、`.txt` 示例文件。
    - 在编辑区调整标题与正文。
+   - 在“AI 模型配置”中选择离线演示、Ollama、LM Studio 或 OpenAI 兼容接口。
    - 使用“生成摘要”“优化标题”“生成平台改写”完成辅助处理。
    - 选择微信公众号 / 小红书 / 抖音模板并复制导出结果。
+
+## 大模型接入
+
+页面内置统一的模型配置面板，配置会保存在当前浏览器的 `localStorage` 中：
+
+| 服务 | 默认接口 | 默认模型 | 说明 |
+| --- | --- | --- | --- |
+| 离线演示模式 | 无 | `local-rule-demo` | 不依赖网络或 API key，使用本地规则生成辅助结果。 |
+| Ollama 本地模型 | `http://localhost:11434/api/chat` | `llama3.1` | 调用 Ollama chat API，适合本机运行的开源模型。 |
+| LM Studio 本地模型 | `http://localhost:1234/v1/chat/completions` | `local-model` | 调用 LM Studio 的 OpenAI 兼容服务。 |
+| OpenAI 兼容接口 | `https://api.openai.com/v1/chat/completions` | `gpt-4o-mini` | 适配 OpenAI 或其他兼容 `/v1/chat/completions` 的服务。 |
+
+本地模型使用前请先启动对应服务：
+
+```bash
+# Ollama 示例
+ollama serve
+ollama pull llama3.1
+```
+
+```text
+LM Studio 示例：在 Local Server 中启动 OpenAI Compatible Server，并确认端口为 1234。
+```
+
+如果浏览器提示跨域错误，需要在本地模型服务中允许当前页面来源。例如 Ollama 可按其官方方式设置 `OLLAMA_ORIGINS` 后重启服务。
 
 ## 当前闭环
 
 - 支持 Markdown、Word/富文本粘贴、HTML 三类输入适配器。
 - 自动转换为统一文章模型：标题、摘要、正文结构块、代码块、图片占位和导入元数据。
 - 自动识别标题、段落、列表、代码块、图片占位等基础结构并展示预览。
-- 提供 3 个离线 AI 辅助动作，便于无 API key 环境下演示。
+- 提供 3 个 AI 辅助动作：无模型时使用离线规则演示，有模型时可调用 Ollama、LM Studio 或 OpenAI 兼容接口。
 - 一键生成三类平台稿件：
   - 微信公众号：长文结构、导语、目录感、代码块保留。
   - 小红书：标题、短段落、要点、标签。
@@ -89,7 +115,7 @@
 
 ## 已知限制
 
-- AI 能力为本地规则模拟，暂未接入真实模型 API。
+- 浏览器直接调用本地或远端模型接口；生产版本建议增加后端代理以保护 API key、统一限流并规避跨域配置。
 - Markdown / Word / HTML 解析覆盖演示所需的标题、摘要、段落、列表、代码块和图片占位，不追求完整排版还原。
 - 静态页面暂不直接解析二进制 `.doc/.docx`；上线版本可接入 `mammoth` 等解析库后进入同一模型。
 - 不包含账号授权、平台自动发布、图片排版或视频生成。
