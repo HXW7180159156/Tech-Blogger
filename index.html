@@ -11,7 +11,7 @@
       <p class="eyebrow">AI-Everything · 可演示闭环</p>
       <h1>技术博客写作 APP MVP</h1>
       <p>
-        从 Markdown 技术草稿导入，到编辑预览、辅助改写，再到微信公众号、小红书、抖音三平台稿件导出。
+        从 Markdown、Word、HTML 技术草稿导入，到统一文章模型、编辑预览、辅助改写，再到微信公众号、小红书、抖音三平台稿件导出。
       </p>
     </header>
 
@@ -22,14 +22,36 @@
             <p class="step">步骤 1</p>
             <h2 id="editor-heading">导入与编辑</h2>
           </div>
-          <button id="load-sample" type="button">载入示例文章</button>
+          <div class="sample-actions" aria-label="载入示例文章">
+            <button data-sample-format="markdown" type="button">Markdown 示例</button>
+            <button data-sample-format="word" type="button">Word 示例</button>
+            <button data-sample-format="html" type="button">HTML 示例</button>
+          </div>
         </div>
 
         <label for="article-title">文章标题</label>
         <input id="article-title" type="text" placeholder="输入技术文章标题" />
 
-        <label for="markdown-input">Markdown 内容</label>
+        <div class="import-controls">
+          <div>
+            <label for="input-format">输入格式</label>
+            <select id="input-format" aria-label="输入格式">
+              <option value="markdown">Markdown</option>
+              <option value="word">Word / 富文本粘贴</option>
+              <option value="html">HTML</option>
+            </select>
+          </div>
+          <div>
+            <label for="file-input">导入文件</label>
+            <input id="file-input" type="file" accept=".md,.markdown,.html,.htm,.txt,.doc,.docx" />
+          </div>
+        </div>
+
+        <label id="source-label" for="markdown-input">Markdown 内容</label>
         <textarea id="markdown-input" spellcheck="false" placeholder="粘贴 Markdown 技术草稿..."></textarea>
+
+        <p id="import-status" class="import-status" role="status"></p>
+        <div id="article-meta" class="article-meta" aria-label="统一文章模型元数据"></div>
 
         <div class="actions" aria-label="AI 辅助动作">
           <button id="summarize" type="button">生成摘要</button>
