@@ -3,113 +3,101 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Tech Blogger 多平台导出 Demo</title>
-    <link rel="stylesheet" href="styles.css" />
+    <title>Tech Blogger MVP Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <header class="hero">
-      <div>
-        <p class="eyebrow">AI-Everything / Tech Blogger</p>
-        <h1>多平台技术内容模板与导出</h1>
-        <p class="hero-copy">
-          输入一篇技术文章，一键生成微信公众号、小红书和抖音各自可发布的草稿内容。
-        </p>
-      </div>
-      <button id="loadSample" class="secondary-button" type="button">载入示例文章</button>
+      <p class="eyebrow">AI-Everything · 可演示闭环</p>
+      <h1>技术博客写作 APP MVP</h1>
+      <p>
+        从 Markdown、Word、HTML 技术草稿导入，到统一文章模型、编辑预览、辅助改写，再到微信公众号、小红书、抖音三平台稿件导出。
+      </p>
     </header>
 
     <main class="workspace">
-      <section class="panel editor-panel" aria-labelledby="editorTitle">
-        <div class="section-title">
+      <section class="panel editor-panel" aria-labelledby="editor-heading">
+        <div class="panel-header">
           <div>
-            <p class="eyebrow">Article</p>
-            <h2 id="editorTitle">文章输入</h2>
+            <p class="step">步骤 1</p>
+            <h2 id="editor-heading">导入与编辑</h2>
           </div>
-          <button id="generateAll" class="primary-button" type="button">一键生成三平台草稿</button>
+          <div class="sample-actions" aria-label="载入示例文章">
+            <button data-sample-format="markdown" type="button">Markdown 示例</button>
+            <button data-sample-format="word" type="button">Word 示例</button>
+            <button data-sample-format="html" type="button">HTML 示例</button>
+          </div>
         </div>
 
-        <label>
-          标题
-          <input id="articleTitle" type="text" />
-        </label>
+        <label for="article-title">文章标题</label>
+        <input id="article-title" type="text" placeholder="输入技术文章标题" />
 
-        <label>
-          摘要
-          <textarea id="articleSummary" rows="3"></textarea>
-        </label>
+        <div class="import-controls">
+          <div>
+            <label for="input-format">输入格式</label>
+            <select id="input-format" aria-label="输入格式">
+              <option value="markdown">Markdown</option>
+              <option value="word">Word / 富文本粘贴</option>
+              <option value="html">HTML</option>
+            </select>
+          </div>
+          <div>
+            <label for="file-input">导入文件</label>
+            <input id="file-input" type="file" accept=".md,.markdown,.html,.htm,.txt,.doc,.docx" />
+          </div>
+        </div>
 
-        <label>
-          标签（逗号分隔）
-          <input id="articleTags" type="text" />
-        </label>
+        <label id="source-label" for="markdown-input">Markdown 内容</label>
+        <textarea id="markdown-input" spellcheck="false" placeholder="粘贴 Markdown 技术草稿..."></textarea>
 
-        <label>
-          封面/配图提示
-          <input id="articleImageHint" type="text" />
-        </label>
+        <p id="import-status" class="import-status" role="status"></p>
+        <div id="article-meta" class="article-meta" aria-label="统一文章模型元数据"></div>
 
-        <label>
-          Markdown 正文
-          <textarea id="articleBody" class="body-editor" rows="18"></textarea>
-        </label>
+        <div class="actions" aria-label="AI 辅助动作">
+          <button id="summarize" type="button">生成摘要</button>
+          <button id="optimize-title" type="button">优化标题</button>
+          <button id="rewrite-platform" type="button">生成平台改写</button>
+        </div>
+
+        <section class="assist-card" aria-labelledby="assist-heading">
+          <h3 id="assist-heading">辅助结果</h3>
+          <p id="summary-output">载入或粘贴文章后，可生成摘要、标题建议和平台改写方向。</p>
+          <div id="title-suggestions" class="chips"></div>
+          <div id="rewrite-output" class="rewrite-output"></div>
+        </section>
       </section>
 
-      <section class="panel preset-panel" aria-labelledby="presetTitle">
-        <div class="section-title">
+      <section class="panel preview-panel" aria-labelledby="preview-heading">
+        <div class="panel-header">
           <div>
-            <p class="eyebrow">Presets</p>
-            <h2 id="presetTitle">模板预设管理</h2>
+            <p class="step">步骤 2</p>
+            <h2 id="preview-heading">结构化预览</h2>
           </div>
+          <span id="word-count" class="badge">0 字</span>
         </div>
-
-        <div id="presetList" class="preset-list" aria-live="polite"></div>
-
-        <form id="presetForm" class="preset-form">
-          <h3>调整当前模板字段</h3>
-          <label>
-            平台
-            <select id="platformSelect"></select>
-          </label>
-          <label>
-            排版风格
-            <input id="presetStyle" type="text" />
-          </label>
-          <label>
-            标题规则
-            <input id="presetTitleRule" type="text" />
-          </label>
-          <label>
-            摘要规则
-            <input id="presetSummaryRule" type="text" />
-          </label>
-          <label>
-            标签建议
-            <input id="presetTagRule" type="text" />
-          </label>
-          <label>
-            代码块处理
-            <input id="presetCodeRule" type="text" />
-          </label>
-          <label>
-            图片比例建议
-            <input id="presetImageRatio" type="text" />
-          </label>
-          <button class="secondary-button" type="submit">保存模板字段</button>
-        </form>
+        <article id="preview" class="preview empty">等待导入 Markdown 内容。</article>
       </section>
 
-      <section class="outputs" aria-labelledby="outputsTitle">
-        <div class="section-title full-width">
+      <section class="panel export-panel" aria-labelledby="export-heading">
+        <div class="panel-header">
           <div>
-            <p class="eyebrow">Exports</p>
-            <h2 id="outputsTitle">平台草稿内容</h2>
+            <p class="step">步骤 3</p>
+            <h2 id="export-heading">平台模板与导出</h2>
           </div>
-          <p id="statusMessage" role="status">已载入内置模板。</p>
+          <button id="copy-export" type="button">复制导出稿</button>
         </div>
-        <div id="outputCards" class="output-grid"></div>
+
+        <div class="template-tabs" role="tablist" aria-label="平台模板">
+          <button class="active" data-template="wechat" type="button">微信公众号</button>
+          <button data-template="xiaohongshu" type="button">小红书</button>
+          <button data-template="douyin" type="button">抖音</button>
+        </div>
+
+        <textarea id="export-output" readonly aria-label="导出内容"></textarea>
+        <p id="copy-status" class="copy-status" role="status"></p>
       </section>
     </main>
 
-    <script src="src/app.js" defer></script>
+    <script src="./src/app.js"></script>
   </body>
 </html>
