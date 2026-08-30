@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tech Blogger 多平台导出 Demo</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div>
+        <p class="eyebrow">AI-Everything / Tech Blogger</p>
+        <h1>多平台技术内容模板与导出</h1>
+        <p class="hero-copy">
+          输入一篇技术文章，一键生成微信公众号、小红书和抖音各自可发布的草稿内容。
+        </p>
+      </div>
+      <button id="loadSample" class="secondary-button" type="button">载入示例文章</button>
+    </header>
+
+    <main class="workspace">
+      <section class="panel editor-panel" aria-labelledby="editorTitle">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Article</p>
+            <h2 id="editorTitle">文章输入</h2>
+          </div>
+          <button id="generateAll" class="primary-button" type="button">一键生成三平台草稿</button>
+        </div>
+
+        <label>
+          标题
+          <input id="articleTitle" type="text" />
+        </label>
+
+        <label>
+          摘要
+          <textarea id="articleSummary" rows="3"></textarea>
+        </label>
+
+        <label>
+          标签（逗号分隔）
+          <input id="articleTags" type="text" />
+        </label>
+
+        <label>
+          封面/配图提示
+          <input id="articleImageHint" type="text" />
+        </label>
+
+        <label>
+          Markdown 正文
+          <textarea id="articleBody" class="body-editor" rows="18"></textarea>
+        </label>
+      </section>
+
+      <section class="panel preset-panel" aria-labelledby="presetTitle">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Presets</p>
+            <h2 id="presetTitle">模板预设管理</h2>
+          </div>
+        </div>
+
+        <div id="presetList" class="preset-list" aria-live="polite"></div>
+
+        <form id="presetForm" class="preset-form">
+          <h3>调整当前模板字段</h3>
+          <label>
+            平台
+            <select id="platformSelect"></select>
+          </label>
+          <label>
+            排版风格
+            <input id="presetStyle" type="text" />
+          </label>
+          <label>
+            标题规则
+            <input id="presetTitleRule" type="text" />
+          </label>
+          <label>
+            摘要规则
+            <input id="presetSummaryRule" type="text" />
+          </label>
+          <label>
+            标签建议
+            <input id="presetTagRule" type="text" />
+          </label>
+          <label>
+            代码块处理
+            <input id="presetCodeRule" type="text" />
+          </label>
+          <label>
+            图片比例建议
+            <input id="presetImageRatio" type="text" />
+          </label>
+          <button class="secondary-button" type="submit">保存模板字段</button>
+        </form>
+      </section>
+
+      <section class="outputs" aria-labelledby="outputsTitle">
+        <div class="section-title full-width">
+          <div>
+            <p class="eyebrow">Exports</p>
+            <h2 id="outputsTitle">平台草稿内容</h2>
+          </div>
+          <p id="statusMessage" role="status">已载入内置模板。</p>
+        </div>
+        <div id="outputCards" class="output-grid"></div>
+      </section>
+    </main>
+
+    <script src="src/app.js" defer></script>
+  </body>
+</html>
